@@ -1,8 +1,7 @@
-package botkit
+package helpers
 
 import (
 	"context"
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"runtime/debug"
@@ -51,10 +50,6 @@ func (b *Bot) handleUpdate(ctx context.Context, update tgbotapi.Update) {
 		}
 	}()
 
-	fmt.Println("🤖🤖🤖🤖🤖")
-	fmt.Println("Жопа!")
-	fmt.Println("🤖🤖🤖🤖🤖")
-
 	if (update.Message == nil || !update.Message.IsCommand()) && update.CallbackQuery == nil {
 		return
 	}
@@ -66,10 +61,6 @@ func (b *Bot) handleUpdate(ctx context.Context, update tgbotapi.Update) {
 	}
 
 	cmd := update.Message.Command()
-
-	fmt.Println("🤖🤖🤖🤖🤖")
-	fmt.Println(cmd)
-	fmt.Println("🤖🤖🤖🤖🤖")
 
 	cmdView, ok := b.cmdViews[cmd]
 	if !ok {

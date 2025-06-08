@@ -1,4 +1,4 @@
-package markup
+package helpers
 
 import "strings"
 

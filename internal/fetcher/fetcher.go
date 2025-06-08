@@ -12,71 +12,50 @@ import (
 	"github.com/emirpasic/gods/sets/hashset"
 )
 
-//go:generate moq --out=mocks/mock_article_storage.go --pkg=mocks . ArticleStorage
-type ArticleStorage interface {
-	Store(ctx context.Context, article models.Article) error
-}
-
-//go:generate moq --out=mocks/mock_sources_provider.go --pkg=mocks . SourcesProvider
-type SourcesProvider interface {
-	Sources(ctx context.Context) ([]models.Source, error)
-}
-
 type Source interface {
-	ID() int64
 	Name() string
-	Fetch(ctx context.Context) ([]models.Item, error)
+	Fetch(ctx context.Context) ([]models.WallGetResponse, error)
 }
 
 type Fetcher struct {
-	articles ArticleStorage
-	sources  SourcesProvider
-
+	vkToken        string
 	fetchInterval  time.Duration
 	filterKeywords []string
 }
 
 func NewFetcher(
-	articles ArticleStorage,
-	sources SourcesProvider,
+	vkToken string,
 	fetchInterval time.Duration,
 	filterKeywords []string,
 ) *Fetcher {
 	return &Fetcher{
-		articles:       articles,
-		sources:        sources,
+		vkToken:        vkToken,
 		fetchInterval:  fetchInterval,
 		filterKeywords: filterKeywords,
 	}
 }
 
 func (f *Fetcher) Fetch(ctx context.Context) error {
-	sources, err := f.sources.Sources(ctx)
-	if err != nil {
-		return err
-	}
 
 	var wg sync.WaitGroup
 
-	for _, source := range sources {
-		wg.Add(1)
+	wg.Add(1)
 
-		go func(source Source) {
-			defer wg.Done()
+	go func(source Source) {
+		defer wg.Done()
 
-			items, err := source.Fetch(ctx)
-			if err != nil {
-				log.Printf("[ERROR] failed to fetch items from source %q: %v", source.Name(), err)
-				return
-			}
+		items, err := source.Fetch(ctx)
+		if err != nil {
+			log.Printf("[ERROR] failed to fetch items from source %q: %v", source.Name(), err)
+			return
+		}
 
-			if err := f.processItems(ctx, source, items); err != nil {
-				log.Printf("[ERROR] failed to process items from source %q: %v", source.Name(), err)
-				return
-			}
+		if err := f.processItems(ctx, source, items); err != nil {
+			log.Printf("[ERROR] failed to process items from source %q: %v", source.Name(), err)
+			return
+		}
 
-		}(src.NewVK(source))
-	}
+	}(src.NewVK(f.vkToken))
 
 	wg.Wait()
 
@@ -103,7 +82,7 @@ func (f *Fetcher) Start(ctx context.Context) error {
 	}
 }
 
-func (f *Fetcher) processItems(ctx context.Context, source Source, items []models.Item) error {
+func (f *Fetcher) processItems(ctx context.Context, source Source, items []models.WallGetResponse) error {
 	for _, item := range items {
 		item.Date = item.Date.UTC()
 
@@ -112,21 +91,12 @@ func (f *Fetcher) processItems(ctx context.Context, source Source, items []model
 			continue
 		}
 
-		if err := f.articles.Store(ctx, models.Article{
-			SourceID:    source.ID(),
-			Title:       item.Title,
-			Link:        item.Link,
-			Summary:     item.Summary,
-			PublishedAt: item.Date,
-		}); err != nil {
-			return err
-		}
 	}
 
 	return nil
 }
 
-func (f *Fetcher) itemShouldBeSkipped(item models.Item) bool {
+func (f *Fetcher) itemShouldBeSkipped(item models.WallGetResponse) bool {
 	categoriesSet := hashset.New()
 
 	for _, category := range item.Categories {
