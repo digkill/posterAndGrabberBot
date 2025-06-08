@@ -14,7 +14,7 @@ import (
 
 type Source interface {
 	Name() string
-	Fetch(ctx context.Context) ([]models.WallGetResponse, error)
+	Fetch(ctx context.Context) (*models.WallGetResponse, error)
 }
 
 type Fetcher struct {
@@ -44,18 +44,18 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 	go func(source Source) {
 		defer wg.Done()
 
-		items, err := source.Fetch(ctx)
+		_, err := source.Fetch(ctx)
 		if err != nil {
 			log.Printf("[ERROR] failed to fetch items from source %q: %v", source.Name(), err)
 			return
 		}
 
-		if err := f.processItems(ctx, source, items); err != nil {
+		/*if err := f.processItems(ctx, source, items); err != nil {
 			log.Printf("[ERROR] failed to process items from source %q: %v", source.Name(), err)
 			return
-		}
+		}*/
 
-	}(src.NewVK(f.vkToken))
+	}(src.NewVK(f.vkToken, "url"))
 
 	wg.Wait()
 
@@ -82,6 +82,7 @@ func (f *Fetcher) Start(ctx context.Context) error {
 	}
 }
 
+/*
 func (f *Fetcher) processItems(ctx context.Context, source Source, items []models.WallGetResponse) error {
 	for _, item := range items {
 		item.Date = item.Date.UTC()
@@ -95,6 +96,7 @@ func (f *Fetcher) processItems(ctx context.Context, source Source, items []model
 
 	return nil
 }
+*/
 
 func (f *Fetcher) itemShouldBeSkipped(item models.WallGetResponse) bool {
 	categoriesSet := hashset.New()

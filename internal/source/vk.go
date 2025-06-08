@@ -3,14 +3,13 @@ package source
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/SlyMarbo/rss"
+	"github.com/digkill/posterAndGrabberBot/internal/fetcher"
 	"github.com/digkill/posterAndGrabberBot/internal/helpers"
 	"github.com/digkill/posterAndGrabberBot/internal/models"
-	"github.com/samber/lo"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -29,22 +28,27 @@ func (s VKSource) Name() string {
 	return "VK"
 }
 
-func (s VKSource) Fetch(ctx context.Context) ([]models.Item, error) {
+func (s VKSource) Fetch(ctx context.Context) (*models.WallGetResponse, error) {
+
 	feed, err := s.loadFeed(ctx, s.URL)
 	if err != nil {
 		return nil, err
 	}
+	return feed, nil
 
-	return lo.Map(feed.Items, func(item *rss.Item, _ int) models.Item {
-		return models.Item{
-			Title:      item.Title,
-			Link:       item.Link,
-			Categories: item.Categories,
-			Date:       item.Date,
+	/*
+		return lo.Map(feed, func(item *models.WallGetResponse, _ int) models.WallGetResponse {
+			return models.WallGetResponse{
+				Title:      item.Title,
+				Link:       item.Link,
+				Categories: item.Categories,
+				Date:       item.Date,
 
-			Caption: strings.TrimSpace(item.Summary),
-		}
-	}), nil
+				Summary: strings.TrimSpace(item.Summary),
+			}
+		}), nil
+	*/
+
 }
 
 func getMaxPhotoUrl(photo *models.Photo) (string, string) {
@@ -61,14 +65,15 @@ func getMaxPhotoUrl(photo *models.Photo) (string, string) {
 	return maxUrl, maxType
 }
 
-func NewVK(vkToken string) VKSource {
+func NewVK(vkToken string, url string) VKSource {
 	return VKSource{
 		VKToken: vkToken,
+		URL:     url,
 	}
 }
 
-func (s VKSource) loadFeed(ctx context.Context, url string) (*rss.Feed, error) {
-	var feedCh = make(chan *rss.Feed)
+func (s VKSource) loadFeed(ctx context.Context, url string) (*models.WallGetResponse, error) {
+	var feedCh = make(chan *models.WallGetResponse)
 	var errCh = make(chan error)
 
 	go func() {
@@ -90,8 +95,9 @@ func (s VKSource) loadFeed(ctx context.Context, url string) (*rss.Feed, error) {
 	}
 }
 
-func (s VKSource) grabbing(url string) {
+func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 	offset := 0
+
 	for {
 		url := fmt.Sprintf(
 			"https://api.vk.com/method/wall.get?owner_id=%d&count=%d&offset=%d&access_token=%s&v=%s",
@@ -134,10 +140,11 @@ func (s VKSource) grabbing(url string) {
 
 		offset += postsCount
 		// Ограничим на всякий, если много постов
-		if offset > 1000 {
+		if offset > 100 {
 			fmt.Println("Enough!")
 			break
 		}
+		return &wallResp, nil
 	}
-
+	return nil, errors.New("no posts found")
 }
