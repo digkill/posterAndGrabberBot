@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"github.com/digkill/posterAndGrabberBot/internal/helpers"
 	"github.com/digkill/posterAndGrabberBot/internal/models"
+	"github.com/gookit/goutil/dump"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -94,7 +96,33 @@ func (s VKSource) loadFeed(ctx context.Context, url string) (*models.WallGetResp
 	}
 }
 
+func getMaxVideoThumb(video *models.Video) (string, string) {
+	maxWidth := 0
+	maxUrl := ""
+	maxType := ""
+	for _, image := range video.Images { // поле Images — массив превью
+		if image.Width > maxWidth {
+			maxWidth = image.Width
+			maxUrl = image.URL
+			maxType = fmt.Sprintf("%dx%d", image.Width, image.Height)
+		}
+	}
+	return maxUrl, maxType
+}
+
+func saveVideoLink(url, filename string) {
+	f, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("Ошибка создания файла:", err)
+		return
+	}
+	defer f.Close()
+	f.WriteString(url)
+	fmt.Println("Сохранил ссылку на видео:", filename)
+}
+
 func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
+	fmt.Println("Starting grabbing...")
 	offset := 0
 
 	for {
@@ -122,6 +150,7 @@ func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 			fmt.Println("Yet not posts.")
 			break
 		}
+		dump.Println(items)
 
 		for _, post := range items {
 			for _, attach := range post.Attachments {
@@ -134,6 +163,21 @@ func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 						time.Sleep(200 * time.Millisecond)
 					}
 				}
+
+				if attach.Type == "video" && attach.Video != nil {
+					video := attach.Video
+					// Формируем ссылку на просмотр видео ВК
+					videoUrl := fmt.Sprintf("https://vk.com/video%d_%d", video.OwnerID, video.ID)
+
+					// Качаем превью (thumbnail) — ищем максимальный размер
+					maxUrl, maxType := getMaxVideoThumb(video)
+					if maxUrl != "" {
+						filename := fmt.Sprintf("post_%d_video_%d_%s.jpg", post.ID, video.ID, maxType)
+						helpers.DownloadPhoto(maxUrl, filename)
+					}
+					// Можно сохранить ссылку на видео во внешний файл:
+					saveVideoLink(videoUrl, fmt.Sprintf("post_%d_video_%d.txt", post.ID, video.ID))
+				}
 			}
 		}
 
@@ -143,7 +187,10 @@ func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 			fmt.Println("Enough!")
 			break
 		}
+		fmt.Println("Fetched ", len(items), " items.")
 		return &wallResp, nil
 	}
+
+	fmt.Println("Finished grabbing...")
 	return nil, errors.New("no posts found")
 }

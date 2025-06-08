@@ -60,6 +60,7 @@ func main() {
 	defer cancel()
 
 	go func(ctx context.Context) {
+		log.Printf("[INFO] newFetcher started")
 		if err := newFetcher.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
 				log.Printf("[ERROR] failed to run newFetcher: %v", err)

@@ -37,6 +37,7 @@ func IsImageOrVideo(ext string) bool {
 }
 
 func DownloadPhoto(url, filename string) {
+	fmt.Printf("Downloading photo from %s\n", url)
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println("Ошибка загрузки:", err)

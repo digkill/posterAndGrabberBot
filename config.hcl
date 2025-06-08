@@ -5,7 +5,7 @@ database_dsn          = ""
 fetch_interval        = "10m"
 notification_interval = "1m"
 
-filter_keywords       = ["go", "go lang", "programmer"]
+filter_keywords       = ["реклама"]
 
 openai_key            = ""
 openai_prompt         = ""

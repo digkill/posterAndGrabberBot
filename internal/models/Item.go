@@ -21,6 +21,7 @@ type WallGetResponse struct {
 type Attachment struct {
 	Type  string `json:"type"`
 	Photo *Photo `json:"photo,omitempty"`
+	Video *Video `json:"video,omitempty"`
 }
 
 type Photo struct {
@@ -31,4 +32,16 @@ type Photo struct {
 		Width  int    `json:"width"`
 		Height int    `json:"height"`
 	} `json:"sizes"`
+}
+
+type Video struct {
+	ID      int    `json:"id"`
+	OwnerID int    `json:"owner_id"`
+	Title   string `json:"title"`
+	// ...
+	Images []struct {
+		URL    string `json:"url"`
+		Width  int    `json:"width"`
+		Height int    `json:"height"`
+	} `json:"image"`
 }
