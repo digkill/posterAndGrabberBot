@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/digkill/posterAndGrabberBot/internal/fetcher"
 	"github.com/digkill/posterAndGrabberBot/internal/helpers"
 	"github.com/digkill/posterAndGrabberBot/internal/models"
 	"io"
