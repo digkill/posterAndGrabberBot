@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	config "github.com/digkill/posterAndGrabberBot/internal"
+	"github.com/digkill/posterAndGrabberBot/internal/services/nutsdb"
+	"time"
 
 	"github.com/digkill/posterAndGrabberBot/internal/fetcher"
 	"github.com/digkill/posterAndGrabberBot/internal/helpers"
@@ -28,6 +31,8 @@ func main() {
 	}
 
 	var (
+		newNutsDB = nutsdb.NewNutsDB()
+
 		newFetcher = fetcher.NewFetcher(
 			config.Get().VKToken,
 			config.Get().FetchInterval,
@@ -49,15 +54,43 @@ func main() {
 		)
 	)
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	go func(ctx context.Context) {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				links, err := newNutsDB.GetAllPendingVideoLinks()
+				if err != nil {
+					log.Println("NutsDB error:", err)
+					continue
+				}
+				for _, url := range links {
+					if err := helpers.DownloadVKVideo(url); err == nil {
+						err := newNutsDB.RemoveVideoLink(url)
+						if err != nil {
+							fmt.Printf("[ERROR] failed to remove link %s: %v", url, err)
+						}
+					} else {
+						log.Println("yt-dlp error:", err)
+					}
+				}
+			}
+		}
+	}(ctx)
+
 	newsBot := helpers.NewBot(botAPI)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
 
 	go func(ctx context.Context) {
 		log.Printf("[INFO] newFetcher started")
