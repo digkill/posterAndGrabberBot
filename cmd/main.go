@@ -84,10 +84,6 @@ func main() {
 					if err != nil {
 						log.Println("MarkVideoURLProcessed:", err)
 					}
-					err = newNutsDB.RemoveVideoLink(url)
-					if err != nil {
-						log.Println("RemoveVideoLink:", err)
-					}
 
 					err = newNutsDB.RemoveVideoLink(url)
 					if err != nil {
