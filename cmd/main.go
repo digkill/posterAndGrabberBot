@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 	config "github.com/digkill/posterAndGrabberBot/internal"
-	"github.com/digkill/posterAndGrabberBot/internal/services/nutsdb"
-	"time"
-
 	"github.com/digkill/posterAndGrabberBot/internal/fetcher"
 	"github.com/digkill/posterAndGrabberBot/internal/helpers"
+	"github.com/digkill/posterAndGrabberBot/internal/services/nutsdb"
+	"time"
 
 	poster "github.com/digkill/posterAndGrabberBot/internal/services/poster"
 	"github.com/digkill/posterAndGrabberBot/internal/summary"
@@ -30,28 +29,34 @@ func main() {
 		return
 	}
 
-	var (
-		newNutsDB = nutsdb.NewNutsDB()
+	newNutsDB := nutsdb.NewNutsDB()
+	defer newNutsDB.Close()
+	if err := newNutsDB.InitBuckets(); err != nil {
+		log.Fatalf("InitBuckets error: %v", err)
+	}
+	if err := newNutsDB.TestCreateAndPush(); err != nil {
+		log.Fatalf("TestCreateAndPush error: %v", err)
+	}
 
-		newFetcher = fetcher.NewFetcher(
-			config.Get().VKToken,
-			config.Get().FetchInterval,
-			config.Get().FilterKeywords,
-		)
+	newFetcher := fetcher.NewFetcher(
+		config.Get().VKToken,
+		config.Get().FetchInterval,
+		config.Get().FilterKeywords,
+		newNutsDB,
+	)
 
-		newOpenAI = summary.NewOpenAI(
-			config.Get().OpenAIKey,
-			config.Get().OpenAIModel,
-			config.Get().OpenAIPrompt,
-		)
+	newOpenAI := summary.NewOpenAI(
+		config.Get().OpenAIKey,
+		config.Get().OpenAIModel,
+		config.Get().OpenAIPrompt,
+	)
 
-		newPoster = poster.NewPoster(
-			config.Get().ImagesDirectory,
-			config.Get().NotificationInterval,
-			botAPI,
-			config.Get().TelegramChannelID,
-			newOpenAI,
-		)
+	newPoster := poster.NewPoster(
+		config.Get().ImagesDirectory,
+		config.Get().NotificationInterval,
+		botAPI,
+		config.Get().TelegramChannelID,
+		newOpenAI,
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -72,14 +77,23 @@ func main() {
 					continue
 				}
 				for _, url := range links {
-					if err := helpers.DownloadVKVideo(url); err == nil {
-						err := newNutsDB.RemoveVideoLink(url)
-						if err != nil {
-							fmt.Printf("[ERROR] failed to remove link %s: %v", url, err)
-						}
-					} else {
+					if err := helpers.DownloadVKVideo(url); err != nil {
 						log.Println("yt-dlp error:", err)
 					}
+					err = newNutsDB.MarkVideoURLProcessed(url)
+					if err != nil {
+						log.Println("MarkVideoURLProcessed:", err)
+					}
+					err = newNutsDB.RemoveVideoLink(url)
+					if err != nil {
+						log.Println("RemoveVideoLink:", err)
+					}
+
+					err = newNutsDB.RemoveVideoLink(url)
+					if err != nil {
+						fmt.Printf("[ERROR] failed to remove link %s: %v", url, err)
+					}
+
 				}
 			}
 		}

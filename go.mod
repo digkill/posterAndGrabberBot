@@ -11,6 +11,7 @@ require (
 	github.com/gookit/goutil v0.6.18
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
+	github.com/nutsdb/nutsdb v1.0.4
 	github.com/sashabaranov/go-openai v1.38.0
 )
 
@@ -23,7 +24,6 @@ require (
 	github.com/gookit/color v1.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/nutsdb/nutsdb v1.0.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/tidwall/btree v1.7.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

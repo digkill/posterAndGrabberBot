@@ -126,7 +126,7 @@ func saveVideoLink(url, filename string) {
 
 func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 	fmt.Println("Starting grabbing...")
-	offset := 0
+	offset := 5
 
 	for {
 		url := fmt.Sprintf(
@@ -173,15 +173,21 @@ func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 					videoUrl := fmt.Sprintf("https://vk.com/video%d_%d", video.OwnerID, video.ID)
 
 					// Качаем превью (thumbnail) — ищем максимальный размер
-					maxUrl, maxType := getMaxVideoThumb(video)
-					if maxUrl != "" {
-						filename := fmt.Sprintf("post_%d_video_%d_%s.jpg", post.ID, video.ID, maxType)
-						helpers.DownloadPhoto(maxUrl, filename)
-					}
+					// maxUrl, maxType := getMaxVideoThumb(video)
+					// if maxUrl != "" {
+					//	filename := fmt.Sprintf("post_%d_video_%d_%s.jpg", post.ID, video.ID, maxType)
+					//	helpers.DownloadPhoto(maxUrl, filename)
+					// }
 					// Можно сохранить ссылку на видео во внешний файл:
 					// saveVideoLink(videoUrl, fmt.Sprintf("post_%d_video_%d.txt", post.ID, video.ID))
 
-					s.nutsDB.SaveVideoLink(videoUrl)
+					if !s.nutsDB.IsVideoURLProcessed(videoUrl) {
+						err := s.nutsDB.SaveVideoLink(videoUrl)
+						if err != nil {
+							fmt.Println("Ошибка сохранения ссылки видео с вк:", err)
+						}
+					}
+
 				}
 			}
 		}

@@ -30,4 +30,5 @@ go.work
 /bin/
 .idea
 
-./internal/storage/images/
+./storage/content
+./storage/data/nutsdb

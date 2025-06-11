@@ -3,6 +3,7 @@ package fetcher
 import (
 	"context"
 	"github.com/digkill/posterAndGrabberBot/internal/models"
+	"github.com/digkill/posterAndGrabberBot/internal/services/nutsdb"
 	src "github.com/digkill/posterAndGrabberBot/internal/source"
 	"log"
 	"strings"
@@ -21,17 +22,20 @@ type Fetcher struct {
 	vkToken        string
 	fetchInterval  time.Duration
 	filterKeywords []string
+	nutsDB         *nutsdb.NutsDB
 }
 
 func NewFetcher(
 	vkToken string,
 	fetchInterval time.Duration,
 	filterKeywords []string,
+	nutsDB *nutsdb.NutsDB,
 ) *Fetcher {
 	return &Fetcher{
 		vkToken:        vkToken,
 		fetchInterval:  fetchInterval,
 		filterKeywords: filterKeywords,
+		nutsDB:         nutsDB,
 	}
 }
 
@@ -55,7 +59,7 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 			return
 		}*/
 
-	}(src.NewVK(f.vkToken, "url"))
+	}(src.NewVK(f.vkToken, "url", f.nutsDB))
 
 	wg.Wait()
 
