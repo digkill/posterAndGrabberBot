@@ -18,7 +18,12 @@ func NewNutsDB() *NutsDB {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	defer func(db *nutsdb.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(db)
 
 	return &NutsDB{
 		db: db,

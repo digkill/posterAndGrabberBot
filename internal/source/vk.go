@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/digkill/posterAndGrabberBot/internal/helpers"
 	"github.com/digkill/posterAndGrabberBot/internal/models"
+	"github.com/digkill/posterAndGrabberBot/internal/services/nutsdb"
 	"github.com/gookit/goutil/dump"
 	"io"
 	"net/http"
@@ -23,6 +24,7 @@ const (
 type VKSource struct {
 	URL     string
 	VKToken string
+	nutsDB  *nutsdb.NutsDB
 }
 
 func (s VKSource) Name() string {
@@ -66,10 +68,11 @@ func getMaxPhotoUrl(photo *models.Photo) (string, string) {
 	return maxUrl, maxType
 }
 
-func NewVK(vkToken string, url string) VKSource {
+func NewVK(vkToken string, url string, nutsDB *nutsdb.NutsDB) VKSource {
 	return VKSource{
 		VKToken: vkToken,
 		URL:     url,
+		nutsDB:  nutsDB,
 	}
 }
 
@@ -176,7 +179,9 @@ func (s VKSource) grabbing(url string) (*models.WallGetResponse, error) {
 						helpers.DownloadPhoto(maxUrl, filename)
 					}
 					// Можно сохранить ссылку на видео во внешний файл:
-					saveVideoLink(videoUrl, fmt.Sprintf("post_%d_video_%d.txt", post.ID, video.ID))
+					// saveVideoLink(videoUrl, fmt.Sprintf("post_%d_video_%d.txt", post.ID, video.ID))
+
+					s.nutsDB.SaveVideoLink(videoUrl)
 				}
 			}
 		}
